@@ -1,4 +1,5 @@
 out/
+out3d/
 photos/*
 !photos/.gitkeep
 __pycache__/
