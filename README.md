@@ -18,7 +18,7 @@ Ten photo-card animations for vertical video, as a Claude Code plugin. Drop in p
 ## Install
 
 ```
-/plugin marketplace add <your-github-user>/cards-animations
+/plugin marketplace add mjcamelobrito-ux/cards-animations
 /plugin install cards-animations@cards-animations-marketplace
 ```
 
