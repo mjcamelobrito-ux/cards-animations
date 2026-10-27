@@ -419,70 +419,42 @@ def bullet_time(lib):
         return Frame(cam, out, float(np.linalg.norm(cam_pos)), 0.045, bg, flash)
     return dur, n, f
 
-def layers_for(lib, idx):
-    """(background, subject, foreground) RGBA layers for one photo."""
-    if lib.has_photos:
-        ph = lib.raw[idx].resize((SPR_W, SPR_H), Image.LANCZOS)
-        bgl = ph.filter(ImageFilter.GaussianBlur(10)).convert("RGBA")
-        m = Image.new("L", (SPR_W, SPR_H), 0)
-        ImageDraw.Draw(m).ellipse((SPR_W * 0.18, SPR_H * 0.12, SPR_W * 0.82, SPR_H * 1.05), 255)
-        sub = ph.convert("RGBA"); sub.putalpha(m.filter(ImageFilter.GaussianBlur(40)))
-    else:
-        combos = [(PURPLE, WHITE_BASE), (SKY, (0, 0, 0)), (ORANGE, WHITE_BASE), (GREEN, (0, 0, 0))]
-        bgc, fig = combos[idx % len(combos)]
-        g = Image.radial_gradient("L").resize((SPR_W * 2, SPR_H * 2)).crop((0, 0, SPR_W, SPR_H))
-        bgl = Image.composite(Image.new("RGB", (SPR_W, SPR_H), bgc), Image.new("RGB", (SPR_W, SPR_H), tuple(min(255, c + 45) for c in bgc)), g).convert("RGBA")
-        sub = Image.new("RGBA", (SPR_W, SPR_H), (0, 0, 0, 0)); d = ImageDraw.Draw(sub)
-        w, h = SPR_W, SPR_H; cx = w / 2
-        d.rounded_rectangle((cx - 0.38 * w, h * 0.66, cx + 0.38 * w, h * 1.3), radius=int(0.35 * w), fill=(*fig, 255))
-        d.ellipse((cx - 0.2 * w, h * 0.25, cx + 0.2 * w, h * 0.25 + 0.45 * w), fill=(*fig, 255))
-    fg = Image.new("RGBA", (SPR_W, SPR_H), (0, 0, 0, 0)); d = ImageDraw.Draw(fg); r = rnd(idx)
-    for _ in range(14):
-        x, y, rr = r.uniform(0, SPR_W), r.uniform(0, SPR_H), r.uniform(18, 70)
-        col = r.choice([YELLOW, SKY, WHITE_BASE, GREEN])
-        d.ellipse((x - rr, y - rr, x + rr, y + rr), fill=(*col, 150))
-    fg = fg.filter(ImageFilter.GaussianBlur(6))
-    return bgl, sub, fg
-
 ARGS_PHOTOS = ""
 
-@scene("through-the-photo", "The camera pushes into a photo, which splits into background, subject and foreground layers; it travels between them to a second photo waiting behind.")
-def through_the_photo(lib):
-    dur, n = 8.0, 2
-    b, s, fg = layers_for(lib, 0)
-    lib.add("L_bg", b); lib.add("L_sub", s); lib.add("L_fg", fg)
-    T_FILL, T_END = 2.2, 7.0
-    ZB, ZS, ZF, Z2 = 7.0, 2.4, 0.7, 11.5
+@scene("photo-carousel", "Vertical photos ride a tilted 3D ellipse that turns like a carousel; the front card is lit and sharp, the far side falls into shadow and soft focus, with a faint floor reflection.")
+def photo_carousel(lib):
+    dur, n = 8.0, 10
+    C = np.array([0.0, 0.0, 4.0]); RX, RZ = 1.75, 1.3
+    floor = -0.95
+    def angle(i, t):
+        spin = 0.55 * t - 0.25 * (1 - math.exp(-t / 0.8)) * 0.8        # eases up to speed
+        return 2 * math.pi * i / n + spin + 0.4 * ease_in_out_cubic(window(t, 5.2, 7.4))   # little surge near the end
     def f(t):
-        out = []
-        push = ease_in_cubic(window(t, 0.2, T_FILL)) * 0.9 + 0.1 * window(t, 0.2, T_FILL)
-        if t < T_FILL:
-            cz = lerp(-6.5, -1.0, push)
-            cam = Camera([0, 0, cz], [0, 0, cz + 5])
-            out.append(Card(0, [0, 0, 0], np.eye(3), 1.0, shade=0.95 + 0.05 * push, sharp=True))
-            return Frame(cam, out, 5, 0.0, lambda: room_bg("ttp"))
-        u = ease_in_out_cubic(window(t, T_FILL, T_END))
-        cz = lerp(-1.0, 4.6, ease_in_out_cubic(window(t, T_FILL + 0.7, T_END)))
-        side = math.sin(u * math.pi)
-        cam = Camera([side * 1.5, side * -0.6, cz], [side * 0.5, side * -0.2, cz + 6])
-        sep = ease_in_out_cubic(window(t, T_FILL, T_FILL + 1.4))
-        zb, zs, zf = ZB * sep, ZS * sep, ZF * sep
-        def plane(key, z, alpha=1.0, extra=1.0):
-            scale = (z + 1.0) / 1.0          # same apparent size as the card at the moment it filled the frame
-            return Card(key, [0, 0, z], np.eye(3), scale * 1.06 * extra, alpha=alpha, sharp=True)
-        bg_a = 1 - ease_in_out_cubic(window(t, 5.0, 6.3))
-        if bg_a > 0.01: out.append(plane("L_bg", zb, bg_a, 1.15))
-        sub_a = clamp((zs - cz - 0.35) / 0.9) if sep > 0.5 else 1.0
-        if sub_a > 0.01: out.append(plane("L_sub", zs, sub_a, 0.8))
-        fg_a = clamp((zf - cz - 0.2) / 0.6) if sep > 0.5 else 1.0
-        if fg_a > 0.01: out.append(plane("L_fg", zf, fg_a))
-        reveal = window(t, 5.0, 6.5)
-        if reveal > 0: out.append(Card(1, [0, 0.0, Z2], rot(math.sin(t) * 4, 0, math.sin(t * 0.7) * 2), 2.1, shade=0.2 + 0.85 * reveal))
+        orbit = math.radians(lerp(-12, 10, ease_in_out_cubic(window(t, 0, dur))))
+        dist = lerp(6.6, 5.6, ease_in_out_cubic(window(t, 0, dur)))
+        cam_pos = C + np.array([math.sin(orbit) * dist, lerp(3.3, 2.2, ease_in_out_cubic(window(t, 0, dur))), -math.cos(orbit) * dist])
+        cam = Camera(cam_pos, C + np.array([0, -0.1, 0]))
+        out, refl = [], []
+        intro = ease_out_cubic(window(t, 0, 1.2))
+        for i in range(n):
+            th = angle(i, t)
+            p = C + np.array([math.sin(th) * RX * lerp(0.35, 1, intro), math.sin(th * 2 + t * 1.3) * 0.08, -math.cos(th) * RZ * lerp(0.35, 1, intro)])
+            yaw = -math.degrees(math.atan2(math.sin(th) / RX, math.cos(th) / RZ))      # face outward along the ellipse normal
+            R = rot(yaw, 0, 0)
+            front = (math.cos(th) + 1) / 2
+            shade = 0.25 + 0.85 * front ** 1.6
+            out.append(Card(i, p, R, 0.88, shade=shade))
+            mp = np.array([p[0], 2 * floor - p[1], p[2]])
+            refl.append(Card(i, mp, np.diag([1, -1, 1]) @ R, 0.88, shade=shade * 0.8, alpha=0.11 * front + 0.03))
+        focus = float(np.linalg.norm(C + np.array([0, 0, -RZ]) - cam_pos))
         def bg():
-            a = room_bg("ttp")
-            add_glow(a, W / 2, H / 2, 420, 520, (255, 242, 220), 26 * reveal)
+            a = room_bg("carousel", glow=(26, 24, 38), cy=0.5)
+            cc = cam.to_cam(C[None]); cx, cy = cam.project(cc)
+            add_glow(a, float(cx[0]), float(cy[0]) - 60, 520, 420, (255, 240, 215), 26)
+            fc = cam.to_cam(np.array([[0, floor, C[2] - 0.5]])); fx, fy = cam.project(fc)
+            add_glow(a, float(fx[0]), float(fy[0]), 700, 220, (255, 240, 215), 12)
             return a
-        return Frame(cam, out, 5, 0.0, bg)
+        return Frame(cam, refl + out, focus, 0.035, bg)
     return dur, n, f
 
 @scene("light-sweep", "In near darkness only card edges show; a narrow beam sweeps across, revealing each photo, and the last one turns fully into the light.")

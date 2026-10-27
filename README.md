@@ -25,7 +25,7 @@ Photos as cards in a dark 3D room: perspective camera, depth-of-field blur, spot
 | `/memory-corridor` | The Memory Corridor | Photos line both sides of an endless corridor; the camera speeds up as each catches the light, then one turns to the lens and fills the screen. |
 | `/falling-photos` | Falling Photographs | Photos fall slowly through a spotlight, tumbling like paper; the camera follows one as it turns face-up and lands on a growing pile. |
 | `/bullet-time` | Bullet-Time Gallery | A burst of photos freezes in mid-air while the camera circles it; time resumes and they scatter outward. |
-| `/through-the-photo` | Through the Photograph | The camera pushes into a photo, which splits into background, subject and foreground layers; it travels between them to a second photo waiting behind. |
+| `/photo-carousel` | Photo Carousel | Vertical photos ride a tilted 3D ellipse that turns like a carousel; the front card is lit and sharp, the far side falls into shadow and soft focus, with a faint floor reflection. |
 | `/light-sweep` | Light Sweeping Across Memories | In near darkness only card edges show; a narrow beam sweeps across, revealing each photo, and the last one turns fully into the light. |
 | `/reverse-explosion` | Reverse Photo Explosion | Photos scattered on the floor lift, spin and fly backward into a floating collage; the camera slowly pulls back to reveal it. |
 | `/photo-spiral` | The Endless Photo Spiral | Photos form a tall spiral; the camera rises through its centre, then the spiral opens into a ring of photos around the viewer. |
