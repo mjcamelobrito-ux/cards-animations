@@ -429,11 +429,42 @@ def photo_carousel(lib):
     def angle(i, t):
         spin = 0.55 * t - 0.25 * (1 - math.exp(-t / 0.8)) * 0.8        # eases up to speed
         return 2 * math.pi * i / n + spin + 0.4 * ease_in_out_cubic(window(t, 5.2, 7.4))   # little surge near the end
+    CARD = 0.88
+    MX, MY = 80, 170                     # safe margin from the frame edges (px)
+    def cam_at(t, dist):
+        k = ease_in_out_cubic(window(t, 0, dur))
+        orbit = math.radians(lerp(-12, 10, k))
+        pos = C + np.array([math.sin(orbit) * dist, dist * lerp(0.5, 0.36, k), -math.cos(orbit) * dist])
+        return Camera(pos, C + np.array([0, -0.1, 0]))
+    def ring_corners(phase):
+        hw, hh = 0.5 * CARD * CARD_W, 0.5 * CARD * CARD_W * 1.25
+        pts = []
+        for i in range(n):
+            th = 2 * math.pi * i / n + phase
+            p = C + np.array([math.sin(th) * RX, 0.0, -math.cos(th) * RZ])
+            yaw = -math.degrees(math.atan2(math.sin(th) / RX, math.cos(th) / RZ))
+            R = rot(yaw, 0, 0)
+            for cx, cy in ((-hw, hh + 0.08), (hw, hh + 0.08), (hw, -hh - 0.08), (-hw, -hh - 0.08)):
+                pts.append(R @ np.array([cx, cy, 0]) + p)
+        return np.array(pts)
+    WORST = np.concatenate([ring_corners(ph) for ph in np.linspace(0, 2 * math.pi / n, 12, endpoint=False)])
+    def fits(t, dist):
+        cam = cam_at(t, dist); pc = cam.to_cam(WORST)
+        if (pc[:, 2] < NEAR).any(): return False
+        x, y = cam.project(pc)
+        return x.min() >= MX and x.max() <= W - MX and y.min() >= MY and y.max() <= H - MY
+    def fit_dist(t):
+        lo, hi = 2.0, 30.0
+        for _ in range(22):
+            mid = (lo + hi) / 2
+            lo, hi = (lo, mid) if fits(t, mid) else (mid, hi)
+        return hi
+    grid = np.linspace(0, dur, 33)
+    FIT = np.array([fit_dist(g) for g in grid])           # closest the camera may get at each moment
     def f(t):
-        orbit = math.radians(lerp(-12, 10, ease_in_out_cubic(window(t, 0, dur))))
-        dist = lerp(6.6, 5.6, ease_in_out_cubic(window(t, 0, dur)))
-        cam_pos = C + np.array([math.sin(orbit) * dist, lerp(3.3, 2.2, ease_in_out_cubic(window(t, 0, dur))), -math.cos(orbit) * dist])
-        cam = Camera(cam_pos, C + np.array([0, -0.1, 0]))
+        d_fit = float(np.interp(t, grid, FIT))
+        dist = d_fit * lerp(1.14, 1.0, ease_in_out_cubic(window(t, 0, dur)))   # slow push-in that stops at the fit
+        cam = cam_at(t, dist); cam_pos = cam.pos
         out, refl = [], []
         intro = ease_out_cubic(window(t, 0, 1.2))
         for i in range(n):
@@ -443,9 +474,9 @@ def photo_carousel(lib):
             R = rot(yaw, 0, 0)
             front = (math.cos(th) + 1) / 2
             shade = 0.25 + 0.85 * front ** 1.6
-            out.append(Card(i, p, R, 0.88, shade=shade))
+            out.append(Card(i, p, R, CARD, shade=shade))
             mp = np.array([p[0], 2 * floor - p[1], p[2]])
-            refl.append(Card(i, mp, np.diag([1, -1, 1]) @ R, 0.88, shade=shade * 0.8, alpha=0.11 * front + 0.03))
+            refl.append(Card(i, mp, np.diag([1, -1, 1]) @ R, CARD, shade=shade * 0.8, alpha=0.11 * front + 0.03))
         focus = float(np.linalg.norm(C + np.array([0, 0, -RZ]) - cam_pos))
         def bg():
             a = room_bg("carousel", glow=(26, 24, 38), cy=0.5)
