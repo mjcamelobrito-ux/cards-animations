@@ -1,0 +1,6 @@
+out/
+photos/*
+!photos/.gitkeep
+__pycache__/
+*.mov
+.DS_Store

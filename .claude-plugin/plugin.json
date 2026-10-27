@@ -1,0 +1,17 @@
+{
+  "name": "cards-animations",
+  "version": "0.1.0",
+  "description": "Ten photo-card motion presets (bloom, orbit, shuffle, grid, accordion, cluster, spotlight, tunnel, domino flips, ribbon) rendered to vertical video with transparent exports.",
+  "author": {
+    "name": "Maria Camelo",
+    "email": "mjcamelobrito@gmail.com"
+  },
+  "keywords": [
+    "video",
+    "animation",
+    "photos",
+    "cards",
+    "motion",
+    "transparent"
+  ]
+}

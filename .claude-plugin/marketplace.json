@@ -1,0 +1,14 @@
+{
+  "name": "cards-animations-marketplace",
+  "owner": {
+    "name": "Maria Camelo",
+    "email": "mjcamelobrito@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "cards-animations",
+      "source": "./",
+      "description": "Photo-card motion presets rendered to video with /<animation-name>."
+    }
+  ]
+}
